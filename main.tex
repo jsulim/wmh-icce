@@ -306,6 +306,16 @@ Distillation & Depth reduction + KD & 3 & 1.08\,G & 0.54\,MB & 0.761 & 27.6\% & 
 \end{tabular}
 \end{table*}
 
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=\textwidth]{fig1_architecture_bc.pdf}
+\caption{Two networks at the same parameter count (0.12\,M). Left:
+uniform width scaling (W0.25). Right: the deepest stage removed and the
+remaining stages widened. The first stage, where small lesions are still
+visible, carries 8 versus 16 channels.}
+\label{fig:arch}
+\end{figure*}
+
 % 설명 3~4문장: 우선순위는 깊이 > 증류 > 프루닝 > 채널 폭.
 % 채널 폭 축소 대비 +11.3%p, 원본 대비 잃었던 작은 병변의 약 57%를 되찾았다.
 % DSC는 원본 수준(0.765 vs 0.766)이고 AVD는 원본보다 작으므로
@@ -327,16 +337,6 @@ distillation and the model produced by pruning are both, in effect,
 U-Nets with reduced channel capacity.
 
 \subsection{Why the Deepest Stage Can Go}
-
-\begin{figure*}[t]
-\centering
-\includegraphics[width=\textwidth]{fig1_architecture_bc.pdf}
-\caption{Two networks at the same parameter count (0.12\,M). Left:
-uniform width scaling (W0.25). Right: the deepest stage removed and the
-remaining stages widened. The first stage, where small lesions are still
-visible, carries 8 versus 16 channels.}
-\label{fig:arch}
-\end{figure*}
 
 % 기전 3문장: U-Net은 단계마다 영상을 절반으로 줄인다
 % (256 -> 128 -> 64 -> 32 -> 16). 3복셀 병변은 16x16에서 0.2복셀이 되어
