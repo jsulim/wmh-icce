@@ -45,7 +45,16 @@ newbiz250401@gmail.com}
 
 % =====================================================================
 \begin{abstract}
-\todo{write last}
+Deploying white matter hyperintensity (WMH) segmentation on machines
+without GPUs motivates model compression. When a 1.98\,M-parameter U-Net
+is reduced to 0.12\,M parameters, DSC falls by only 0.010, but
+small-lesion recall falls by 0.201, showing that DSC hides a much larger
+loss. We compare four compression families and an attention variant at a
+matched parameter budget using lesion-size-stratified recall. Removing
+the deepest U-Net stage gives the highest small-lesion recall (0.479),
+equal within seed variation to a four-times-larger model, while keeping
+DSC at the baseline level. Compression studies for WMH segmentation
+should therefore report lesion-size-stratified recall alongside DSC.
 % 아래 다섯 문장을 영어로 풀면 됩니다.
 %  (1) WMH 분할 모델을 GPU 없는 환경에 배포하려면 압축이 필요하다.
 %  (2) 그런데 1/16로 줄이면 DSC는 0.010만 떨어지는 반면
@@ -67,13 +76,19 @@ segmentation, small lesion detection, edge deployment
 
 % 1문단: WMH가 무엇이고 왜 자동 분할이 필요한가.
 %        치매·뇌졸중 위험 평가에 쓰이는 지표다.
-\todo{what WMH is and why automatic segmentation matters}
+White matter hyperintensities (WMH) are visible lesions on brain MRI and
+are used as imaging markers in dementia and stroke risk assessment.
+Manual delineation is time-consuming and variable, so automatic
+segmentation is needed for consistent quantification.
 
 % 2문단: 배포 제약. 상위권 방법은 GPU 서버의 앙상블이다.
 %        병원 판독실 PC에는 GPU가 없고 영상을 외부로 보내기
 %        어려운 경우가 있어 압축 연구가 늘고 있다.
-\todo{deployment constraint motivates compression}
-\cite{zhu2022vbnet,mahe2026strokeseg,lan2026kd}
+High-performing segmentation systems often rely on ensembles or large
+models that assume GPU-side inference. In routine reading rooms, however,
+GPU hardware may be unavailable, and sending scans outside the hospital
+can be difficult; this motivates compact models for local deployment
+\cite{zhu2022vbnet,mahe2026strokeseg,lan2026kd}.
 
 % 3문단 — 문제 제기. 여기가 논문의 핵심입니다.
 %        기존 압축 연구는 결과를 DSC 하나로 보고한다.
@@ -81,15 +96,17 @@ segmentation, small lesion detection, edge deployment
 %        이 데이터에서 작은 병변은 개수로 전체의 37%지만 부피로는 2% 미만이다.
 %        실제로 파라미터를 1/16로 줄였을 때 DSC는 0.010만 떨어졌지만
 %        작은 병변 재현율은 0.201 떨어졌다. 스무 배 차이다.
-\todo{existing work reports DSC only; DSC is pixel-dominated;
-small lesions are 37\% by count but under 2\% by volume;
-DSC drops 0.010 while small-lesion recall drops 0.201}
+The usual summary metric for compression is DSC, but DSC is dominated by
+overlapping pixels and therefore by large lesions. In our test set, small
+lesions are 37\% of lesions by count but under 2\% by volume. When the
+baseline is reduced from 1.98\,M to 0.12\,M parameters, DSC drops by only
+0.010, while small-lesion recall drops by 0.201, a 20-fold larger change.
 
 % 4문단 — 연구 질문.
 %        그렇다면 같은 파라미터 수로 줄일 때
 %        어떤 압축 방식이 작은 병변을 가장 덜 잃는가?
-\todo{research question: at a matched parameter budget, which
-compression method loses the fewest small lesions?}
+This raises the question studied here: at a matched parameter budget,
+which compression strategy loses the fewest small lesions?
 
 The contributions of this paper are threefold:
 \begin{itemize}
@@ -105,33 +122,21 @@ The contributions of this paper are threefold:
 % =====================================================================
 \section{Related Work}
 
-% 4페이지라 길게 쓸 공간이 없습니다. 각 항목 1~2문장.
-
-% (a) 경량 WMH 모델: VB-Net은 1.08M까지 줄였으나
-%     압축 전후 비교와 병변 크기 분석이 없다.
-\todo{lightweight WMH models} \cite{zhu2022vbnet}
-
-% (b) 압축: StrokeSeg2는 증류로 병변 F1을 유지했다고 보고하지만
-%     병변이 WMH보다 크다. Lan et al.은 채널 폭 1/4 축소 + 출력 증류로
-%     손실의 60.8%를 회복했으나 대상이 뇌 해부 구조여서
-%     작은 병변 문제가 발생하지 않는다. 해부 구조는 항상 같은 자리에
-%     일정한 크기로 있어 거친 해상도에서도 보이지만,
-%     작은 병변은 위치가 임의이고 거친 해상도에서 사라진다.
-\todo{compression for deployment}
-\cite{mahe2026strokeseg,lan2026kd}
-
-% (c) 깊이 축소: 얕은 U-Net이 더 좋은 경우가 보고되어 있고,
-%     작은 WMH가 얕은 층에 의존한다는 보고도 있다.
-%     본 연구는 이를 처음 발견하는 것이 아니라
-%     동일 파라미터 조건의 계열 비교로 정량화한다.
-\todo{depth reduction is known; our contribution is quantification}
-\cite{zhou2020unetpp,fedasap2026}
-
-% (d) 작은 병변 누락: Philps et al.은 불확실성 추정으로 놓친
-%     작은 심부 WMH를 사후 탐지한다. 본 연구는 사후 탐지가 아니라
-%     구조 선택으로 접근한다.
-\todo{post-hoc detection of missed lesions vs our structural approach}
-\cite{philps2025}
+Compact WMH segmentation has been studied before; for example, VB-Net
+reduces the model to 1.08\,M parameters, but does not analyze compression
+against an uncompressed counterpart or stratify performance by lesion
+size \cite{zhu2022vbnet}. Compression has also been studied for related
+segmentation tasks: StrokeSeg2 uses distillation to preserve lesion F1,
+and Lan et al. combine $1/4$ channel scaling with output distillation
+\cite{mahe2026strokeseg,lan2026kd}. These settings differ from small WMH
+segmentation because larger stroke lesions or anatomical structures are
+less likely to vanish at coarse resolution. Depth reduction and shallow
+U-Net variants are also known, and prior work has reported that small WMH
+depend on shallow features \cite{zhou2020unetpp,fedasap2026}. Missed
+small deep WMH have further been addressed with post-hoc uncertainty
+estimation \cite{philps2025}. Our contribution is not to claim these
+ideas as new, but to quantify, at a matched parameter budget, which
+compression family preserves small lesions best.
 
 % =====================================================================
 \section{Method}
@@ -161,15 +166,21 @@ MACs per $256\!\times\!256$ slice. The input stacks the slice above, the
 current slice and the slice below as three channels.
 % 2.5D를 쓴 이유: 슬라이스가 3mm로 두꺼워 3D 합성곱의 이득이 작고,
 % 파라미터·메모리 증가가 경량화 목적과 맞지 않는다.
-\todo{one sentence on why 2.5D}
+We use 2.5D rather than 3D because slices are 3\,mm thick, limiting the
+benefit of through-plane convolution, while 3D models increase parameters
+and memory in conflict with the compression goal.
 
 % 학습 설정: 60 epoch, AdamW (lr 1e-3, wd 1e-4), cosine, BCE+Dice,
 % 라벨 2 제외, 병변 슬라이스 3배 샘플링, 검증 9명 DSC 최대 epoch 선택.
-\todo{training setup in one or two sentences}
+Models are trained for 60 epochs with AdamW (learning rate $10^{-3}$,
+weight decay $10^{-4}$), a cosine schedule, and BCE+Dice loss after
+excluding label 2. Lesion-containing slices are sampled three times more
+often, and the checkpoint is selected by the best DSC on the nine-subject
+validation split.
 
 Every compressed model is held to the same parameter count, about
 0.12\,M, one sixteenth of the baseline. If models differ in size the
-larger one wins by default and the question ``which method is better''
+larger one wins by default and the question ``which method loses less''
 cannot be asked. At a fixed budget, any difference reflects \emph{where}
 the parameters were spent. Parameter count alone is not a fair cost
 measure: convolution parameters scale with the square of the channel
@@ -247,9 +258,9 @@ $\Delta$ W1.0$\to$W0.25 & & $-0.010$ & $\mathbf{-0.201}$ & $-0.051$ \\
 Table~\ref{tab:hidden} shows the failure mode that DSC hides. Reducing
 the baseline from 1.98\,M to 0.12\,M parameters lowers DSC by only 0.010,
 but lowers small-lesion recall by 0.201, a 20-fold larger change; large
-lesion recall falls by 0.051. This is not explained by file size alone:
-INT8 conversion with the same architecture and parameter count already
-costs 0.101 small-lesion recall. DSC is insensitive to this loss because
+lesion recall falls by 0.051. This is not explained by reduced capacity
+alone: INT8 conversion, which leaves the architecture and parameter count
+unchanged, already costs 0.101 small-lesion recall. DSC is insensitive to this loss because
 small lesions are 37\% of lesions by count but under 2\% by volume.
 
 \begin{figure}[t]
@@ -368,7 +379,7 @@ evidence.
 Distillation helps the poorly allocated W0.25 student, increasing
 small-lesion recall from 0.366 to 0.420, but at the cost of volume
 accuracy: AVD rises from 25.2\% to 33.3\%. When added to the
-depth-reduced structure, distillation does not improve recall (0.479 to
+depth-reduced structure, distillation gives no recall gain (0.479 to
 0.466) and increases both AVD (27.6\%) and seed variation (0.040). Thus,
 distillation partly compensates for a structural deficit, but it does not
 substitute for allocating parameters to the stages where small lesions
@@ -410,17 +421,33 @@ bought with extra computation.
 % 1문단 — 함의. 압축할 때 작은 병변을 지키려면 파라미터를 어디에 써야
 % 하는가에 대한 답은 "작은 병변이 아직 보이는 고해상도 단계의 채널에
 % 써라"이다. 학습 기법이나 추가 기구는 그다음이다.
-\todo{where to spend the budget}
+The practical implication is that, under a tight parameter budget,
+compression should spend capacity where small lesions are still spatially
+visible. In this U-Net family, that means keeping channels in the
+high-resolution stages and removing the deepest stage, rather than first
+shrinking every stage uniformly and relying on training tricks or added
+modules to recover the loss.
 
 % 2문단 — 보고 관행. 경량화 연구가 DSC만 보고하면 이 손실이 드러나지
 % 않는다. 병변 크기별 재현율을 함께 보고할 것을 제안한다.
-\todo{reporting practice: size-stratified recall should accompany DSC}
+The reporting implication is equally important. If lightweight WMH
+models are evaluated only by DSC, a model can appear nearly unchanged
+while losing many small lesions. We therefore recommend reporting
+lesion-size-stratified recall together with DSC, with AVD or lesion
+precision used to check that higher recall is not obtained by simply
+painting more voxels.
 
 % 3문단 — 한계. 데이터셋 1개, U-Net 계열 1개, FLAIR 단일 입력.
 % 임상 결과와의 연관성은 검증하지 않았다. 계열당 대표 기법 하나씩만
 % 다루었으며 QAT와 특징 증류는 향후 과제다. 실기기 속도는 CPU 한
 % 기종에서만 측정했다.
-\todo{limitations}
+This study has several limitations. It uses one dataset, one U-Net family,
+and FLAIR as the only input sequence, and it does not test whether the
+additional small lesions change clinical decisions. We also evaluate one
+representative method per compression family; quantization-aware training
+and feature distillation remain future work. Measured runtime is reported
+on one CPU platform, so deployment speed should be remeasured for other
+hardware.
 
 % =====================================================================
 \section{Conclusion}
@@ -430,7 +457,14 @@ bought with extra computation.
 % 증류(0.420)를 모두 앞섰고 4배 큰 모델과 동급이며 DSC는 원본 수준을
 % 유지했다. 대가는 계산량이며 환자당 약 4초다.
 % 경량화 연구는 DSC만 보고해서는 안 된다.
-\todo{conclusion}
+What is removed matters as much as how much is removed. At the same
+0.12\,M-parameter budget, removing the deepest stage and preserving
+high-resolution channels reaches 0.479 small-lesion recall, above width
+scaling (0.366), pruning (0.397), and distillation (0.420). It is equal
+within seed variation to a four-times-larger W0.5 model and keeps DSC at
+the baseline level, but the price is higher computation: about 4 seconds
+per subject on CPU. Lightweight WMH segmentation should not be judged by
+DSC alone.
 
 % =====================================================================
 \bibliographystyle{IEEEtran}
