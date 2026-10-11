@@ -131,8 +131,7 @@ and Lan et al. combine $1/4$ channel scaling with output distillation
 \cite{mahe2026strokeseg,lan2026kd}. These settings differ from small WMH
 segmentation because larger stroke lesions or anatomical structures are
 less likely to vanish at coarse resolution. Depth reduction and shallow
-U-Net variants are also known, and prior work has reported that small WMH
-depend on shallow features \cite{zhou2020unetpp,fedasap2026}. Missed
+U-Net variants are also known \cite{zhou2020unetpp}. Missed
 small deep WMH have further been addressed with post-hoc uncertainty
 estimation \cite{philps2025}. Our contribution is not to claim these
 ideas as new, but to quantify, at a matched parameter budget, which
@@ -160,7 +159,7 @@ $11\,\mathrm{mm^3}$ spans 2.3 voxels on one scanner and 6.3 on another.
 
 \subsection{Baseline and Matched Parameter Budget}
 
-The baseline is a 2.5D U-Net (MONAI \texttt{BasicUNet}) with five stages
+The baseline is a 2.5D U-Net \cite{ronneberger2015unet} (MONAI \texttt{BasicUNet}) with five stages
 and channels 32--32--64--128--256, giving 1.98\,M parameters and 4.98\,G
 MACs per $256\!\times\!256$ slice. The input stacks the slice above, the
 current slice and the slice below as three channels.
@@ -201,7 +200,7 @@ CPU time alongside.
         calibration slices, per-channel MinMax, no retraining.
   \item \textbf{Distillation.} Teacher W1.0 to student, logit
         distillation at $\tau=2$ with a per-lesion weight
-        $\sqrt{V_{\mathrm{med}}/V}$ clipped to $[1,4]$.
+        $\sqrt{V_{\mathrm{med}}/V}$ clipped to $[1,4]$ \cite{hinton2015distilling}.
   \item \textbf{Attention gates.} Attention U-Net gates
         \cite{oktay2018attention} on every skip connection
         ($+3.5\%$ parameters).
@@ -344,6 +343,7 @@ visible, carries 8 versus 16 channels.}
 % (256 -> 128 -> 64 -> 32 -> 16). 3복셀 병변은 16x16에서 0.2복셀이 되어
 % 이미 없다. 즉 가장 깊은 단계는 작은 병변에 대한 정보를 갖고 있지 않은데,
 % 파라미터는 그곳이 전체의 약 1/3이다.
+Fig.~\ref{fig:arch} shows how the two matched-budget structures differ.
 The mechanism is consistent with the U-Net resolution schedule. Each
 downsampling stage halves the image size (256, 128, 64, 32, and
 16 pixels), so a 3-voxel lesion occupies only about 0.2 voxel at the
