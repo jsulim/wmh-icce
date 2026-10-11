@@ -328,15 +328,15 @@ U-Nets with reduced channel capacity.
 
 \subsection{Why the Deepest Stage Can Go}
 
-\begin{figure}[t]
+\begin{figure*}[t]
 \centering
-\includegraphics[width=\columnwidth]{fig1_architecture_bc.pdf}
+\includegraphics[width=\textwidth]{fig1_architecture_bc.pdf}
 \caption{Two networks at the same parameter count (0.12\,M). Left:
 uniform width scaling (W0.25). Right: the deepest stage removed and the
 remaining stages widened. The first stage, where small lesions are still
 visible, carries 8 versus 16 channels.}
 \label{fig:arch}
-\end{figure}
+\end{figure*}
 
 % 기전 3문장: U-Net은 단계마다 영상을 절반으로 줄인다
 % (256 -> 128 -> 64 -> 32 -> 16). 3복셀 병변은 16x16에서 0.2복셀이 되어
