@@ -244,8 +244,13 @@ $\Delta$ W1.0$\to$W0.25 & & $-0.010$ & $\mathbf{-0.201}$ & $-0.051$ \\
 % 큰 병변은 0.051. 구조와 파라미터가 같은 INT8 변환만으로도 0.101이
 % 떨어지므로 "작아서 당연하다"로 설명되지 않는다.
 % 왜 DSC가 못 보는가: 작은 병변은 개수로 37%지만 픽셀로는 2% 미만이다.
-Table~\ref{tab:hidden} \todo{read the table; 20-fold gap; INT8 alone
-costs 0.101 so size alone does not explain it}
+Table~\ref{tab:hidden} shows the failure mode that DSC hides. Reducing
+the baseline from 1.98\,M to 0.12\,M parameters lowers DSC by only 0.010,
+but lowers small-lesion recall by 0.201, a 20-fold larger change; large
+lesion recall falls by 0.051. This is not explained by file size alone:
+INT8 conversion with the same architecture and parameter count already
+costs 0.101 small-lesion recall. DSC is insensitive to this loss because
+small lesions are 37\% of lesions by count but under 2\% by volume.
 
 \begin{figure}[t]
 \centering
@@ -260,8 +265,10 @@ from 11 to 4 and recovers to 11, while DSC \emph{rises} across the panels
 % 설명 2문장: 압축 모델은 애매한 픽셀을 칠하지 않는 보수적 방향으로
 % 움직이는데, 큰 병변의 흐릿한 경계에서 과잉 칠이 줄어 DSC가 오히려 오른다.
 % 작은 병변은 전체가 애매한 픽셀이라 통째로 사라진다.
-Fig.~\ref{fig:map} \todo{conservative models gain DSC at large-lesion
-boundaries while losing small lesions entirely}
+Fig.~\ref{fig:map} illustrates why the two metrics can move in opposite
+directions. A conservative model can gain DSC by reducing over-painting
+along uncertain large-lesion boundaries, while a small lesion may consist
+almost entirely of such uncertain pixels and disappear as a whole.
 
 \subsection{Matched-Budget Comparison}
 
@@ -294,14 +301,21 @@ Distillation & Depth reduction + KD & 3 & 1.08\,G & 0.54\,MB & 0.761 & 27.6\% & 
 % 채널 폭 축소 대비 +11.3%p, 원본 대비 잃었던 작은 병변의 약 57%를 되찾았다.
 % DSC는 원본 수준(0.765 vs 0.766)이고 AVD는 원본보다 작으므로
 % 더 칠해서 더 찾은 것이 아니다.
-Table~\ref{tab:main} \todo{ranking; +11.3 points over width scaling;
-57\% of the loss recovered; DSC at baseline level and AVD below baseline,
-so the gain is not over-painting}
+Table~\ref{tab:main} ranks the matched-budget models by small-lesion
+recall: removing the deepest stage performs best, followed by
+size-aware distillation, L1 filter pruning, and uniform width scaling. It
+is 11.3 percentage points above width scaling (0.479 vs. 0.366),
+recovering about 57\% of the loss from the full-width baseline to W0.25.
+Its DSC remains at the baseline level (0.765 vs. 0.766), and its AVD is
+lower than the baseline AVD (22.8\% vs. 24.6\%), so the higher recall is
+not obtained by simply painting more lesion voxels.
 
 % 채널 폭 축소를 비교군으로 삼은 이유 1문장:
 % 증류의 학생 구조도 프루닝의 결과물도 결국 폭이 줄어든 U-Net이므로,
 % 폭 축소는 다른 세 계열이 공통으로 깔고 있는 바탕 구조다.
-\todo{why width scaling is the right control}
+Width scaling is the relevant control because the student used for
+distillation and the model produced by pruning are both, in effect,
+U-Nets with reduced channel capacity.
 
 \subsection{Why the Deepest Stage Can Go}
 
@@ -319,14 +333,20 @@ visible, carries 8 versus 16 channels.}
 % (256 -> 128 -> 64 -> 32 -> 16). 3복셀 병변은 16x16에서 0.2복셀이 되어
 % 이미 없다. 즉 가장 깊은 단계는 작은 병변에 대한 정보를 갖고 있지 않은데,
 % 파라미터는 그곳이 전체의 약 1/3이다.
-\todo{pooling mechanism: a 3-voxel lesion is 0.2 voxels at
-$16\!\times\!16$, yet the deepest stage holds a third of the parameters}
+The mechanism is consistent with the U-Net resolution schedule. Each
+downsampling stage halves the image size (256, 128, 64, 32, and
+16 pixels), so a 3-voxel lesion occupies only about 0.2 voxel at the
+$16\!\times\!16$ stage. The deepest stage therefore has little spatial
+evidence for small lesions, yet it contains about one third of the
+parameters.
 
 % 블록 민감도 1문장: 원본에서 블록 하나씩 필터 절반을 잘라 DSC 변화를
 % 재면, 가장 깊은 층은 656k를 잘라도 -0.002인 반면
 % 가장 얕은 층은 20k만 잘라도 -0.11이다.
-\todo{block sensitivity: 656k parameters cut costs 0.002 DSC at the
-deepest block, 20k costs 0.11 at the shallowest}
+A block-sensitivity check on the baseline supports the same interpretation:
+halving filters in the deepest block removes 656k parameters but changes
+DSC by only 0.002, whereas halving filters in the shallowest block removes
+about 20k parameters and changes DSC by 0.11.
 
 Compared against a model four times larger, depth reduction (0.13\,M,
 1.08\,G) reaches $0.479 \pm 0.009$ while W0.5 (0.49\,M, 1.26\,G) reaches
@@ -334,7 +354,10 @@ $0.470 \pm 0.003$---equal within seed variation, at one quarter the size
 and lower compute.
 % 1문장: 깊이 축소 모델은 W0.5에서 가장 깊은 단계만 떼어낸 것이므로,
 % 이는 그 단계가 파라미터만 차지하고 일을 하지 않았다는 직접 증거다.
-\todo{direct evidence that the deepest stage was idle}
+Because this model is obtained from W0.5 by removing only the deepest
+stage, this comparison is direct evidence that the removed stage was
+mostly occupying parameters rather than contributing useful small-lesion
+evidence.
 
 \subsection{Training Tricks Do Not Substitute for Structure}
 
@@ -342,15 +365,25 @@ and lower compute.
 % AVD가 25.2%에서 33.3%로 커진다. 깊이 축소 위에 얹으면
 % 0.479 -> 0.466으로 늘지 않고 AVD(27.6%)와 seed 편차(0.040)만 커진다.
 % 증류는 구조적 결함을 메우는 기법이므로 구조를 고치면 메울 것이 남지 않는다.
-\todo{distillation helps the badly structured model and does nothing on
-top of the well structured one}
+Distillation helps the poorly allocated W0.25 student, increasing
+small-lesion recall from 0.366 to 0.420, but at the cost of volume
+accuracy: AVD rises from 25.2\% to 33.3\%. When added to the
+depth-reduced structure, distillation does not improve recall (0.479 to
+0.466) and increases both AVD (27.6\%) and seed variation (0.040). Thus,
+distillation partly compensates for a structural deficit, but it does not
+substitute for allocating parameters to the stages where small lesions
+remain visible.
 
 % 어텐션 2문장: 사전에 "차이 0.02 미만이면 무승부"로 정해 두었고
 % 실제 차이는 0.014였다. 세 seed 모두 재현율이 올랐으나 정밀도가
 % 0.642에서 0.631로 떨어져 F1은 그대로다. 파라미터를 3.5% 더 쓰고
 % 얻은 것이 없다.
-\todo{attention gates: pre-registered tie threshold, observed gap 0.014,
-precision falls so F1 is unchanged}
+For attention gates, we used a pre-registered criterion: a difference
+below 0.02 was treated as a tie, whereas a difference of at least 0.03
+was treated as meaningful. The observed recall gap was 0.014, so attention
+provides no significant gain by this criterion. Although recall increased
+for all three seeds, precision fell from 0.642 to 0.631 and lesion F1
+remained essentially unchanged, despite using 3.5\% more parameters.
 
 \subsection{Compute Cost}
 
@@ -360,9 +393,16 @@ precision falls so F1 is unchanged}
 % (b) 계산량까지 맞춘 모델(0.03M, 0.28G)도 0.418로 폭 축소(0.366)를 이긴다.
 % 즉 가장 깊은 단계를 빼는 것 자체는 계산량 대가 없이 이득이고,
 % 0.418에서 0.479로 더 올리는 부분이 계산량을 지불하고 사는 것이다.
-\todo{3.4x MACs and 2.8x wall-clock; but a compute-matched variant
-(0.03\,M, 0.28\,G) still reaches 0.418 versus 0.366, so removing the
-deepest stage is free and only the further gain is paid for}
+Depth reduction has the same parameter budget as W0.25 but uses 3.4 times
+more MACs (1.08\,G vs. 0.32\,G), and measured CPU time increases from
+about 1.4 to 4 seconds per subject. This cost should not be hidden, but
+two checks qualify it: the model remains lower-compute than the
+performance-matched W0.5 model (1.08\,G vs. 1.26\,G), and a
+compute-matched depth-reduced variant (0.03\,M, 0.28\,G; single seed,
+reference only) still reaches 0.418 small-lesion recall versus 0.366 for
+W0.25. Thus, removing the deepest stage itself gives a gain without a
+compute penalty; the additional increase from 0.418 to 0.479 is the part
+bought with extra computation.
 
 % =====================================================================
 \section{Discussion}
