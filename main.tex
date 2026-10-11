@@ -1,14 +1,399 @@
-\documentclass{article}
-\usepackage{graphicx} % Required for inserting images
+% =====================================================================
+% IEEE ICCE 2027 — 4 pages
+%
+% 쓰는 순서
+%   1) Sec. IV Results      (표가 채워져 있으니 설명 문장만 붙이면 됨)
+%   2) Sec. III Method
+%   3) Sec. I Introduction
+%   4) Sec. V/VI Discussion, Conclusion
+%   5) Abstract             (맨 마지막)
+%
+% 한글 안내는 전부 % 주석으로 넣었습니다. 컴파일에 영향이 없습니다.
+% 본문에 \todo{...}로 표시된 자리를 영어 문장으로 채우면 됩니다.
+% 제출 전 아래 \todo 정의를 \newcommand{\todo}[1]{} 로 바꾸면 전부 사라집니다.
+% =====================================================================
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
 
-\title{LiteWMH: Lightweight White Matter Hyperintensity Segmentation for Efficient Brain MRI Analysis}
-\author{Jinseong Ha}
-\date{October 2026}
+\usepackage{cite}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage[hidelinks]{hyperref}
+\usepackage{xcolor}
+
+\graphicspath{{figures/}}
+
+% 초안용 메모. 제출 전에 아래 줄을 \newcommand{\todo}[1]{} 로 교체.
+\newcommand{\todo}[1]{\textcolor{red}{[TODO: #1]}}
 
 \begin{document}
 
+\title{What Compression Removes: Small Lesions Vanish\\
+While Dice Stays Flat in White Matter\\
+Hyperintensity Segmentation}
+
+% 저자 정보를 채우세요.
+\author{\IEEEauthorblockN{Junsu Lim}
+\IEEEauthorblockA{\textit{Department of XXX} \\
+\textit{Sangmyung University}\\
+Seoul, Korea \\
+newbiz250401@gmail.com}
+}
+
 \maketitle
 
+% =====================================================================
+\begin{abstract}
+\todo{write last}
+% 아래 다섯 문장을 영어로 풀면 됩니다.
+%  (1) WMH 분할 모델을 GPU 없는 환경에 배포하려면 압축이 필요하다.
+%  (2) 그런데 1/16로 줄이면 DSC는 0.010만 떨어지는 반면
+%      작은 병변 재현율은 0.201 떨어진다. DSC가 이 손실을 숨긴다.
+%  (3) 네 압축 계열과 어텐션을 같은 0.12M 파라미터에서
+%      병변 크기별 재현율로 비교했다.
+%  (4) 가장 깊은 단계를 제거한 구조가 0.479로 가장 좋았고,
+%      4배 큰 모델과 같은 수준이며 DSC는 원본 수준을 유지했다.
+%  (5) 경량화 연구는 DSC만 보고해서는 안 된다.
+\end{abstract}
+
+\begin{IEEEkeywords}
+white matter hyperintensity, model compression, medical image
+segmentation, small lesion detection, edge deployment
+\end{IEEEkeywords}
+
+% =====================================================================
 \section{Introduction}
+
+% 1문단: WMH가 무엇이고 왜 자동 분할이 필요한가.
+%        치매·뇌졸중 위험 평가에 쓰이는 지표다.
+\todo{what WMH is and why automatic segmentation matters}
+
+% 2문단: 배포 제약. 상위권 방법은 GPU 서버의 앙상블이다.
+%        병원 판독실 PC에는 GPU가 없고 영상을 외부로 보내기
+%        어려운 경우가 있어 압축 연구가 늘고 있다.
+\todo{deployment constraint motivates compression}
+\cite{zhu2022vbnet,mahe2026strokeseg,lan2026kd}
+
+% 3문단 — 문제 제기. 여기가 논문의 핵심입니다.
+%        기존 압축 연구는 결과를 DSC 하나로 보고한다.
+%        그러나 DSC는 겹친 픽셀 수로 점수를 매기므로 큰 병변이 지배한다.
+%        이 데이터에서 작은 병변은 개수로 전체의 37%지만 부피로는 2% 미만이다.
+%        실제로 파라미터를 1/16로 줄였을 때 DSC는 0.010만 떨어졌지만
+%        작은 병변 재현율은 0.201 떨어졌다. 스무 배 차이다.
+\todo{existing work reports DSC only; DSC is pixel-dominated;
+small lesions are 37\% by count but under 2\% by volume;
+DSC drops 0.010 while small-lesion recall drops 0.201}
+
+% 4문단 — 연구 질문.
+%        그렇다면 같은 파라미터 수로 줄일 때
+%        어떤 압축 방식이 작은 병변을 가장 덜 잃는가?
+\todo{research question: at a matched parameter budget, which
+compression method loses the fewest small lesions?}
+
+The contributions of this paper are threefold:
+\begin{itemize}
+  \item We show that compression removes small lesions in a way DSC does
+        not reveal, by measuring recall stratified by lesion volume.
+  \item We compare four compression families and an attention variant
+        under a \emph{matched parameter budget} on the same model and data.
+  \item We give a practical guideline---remove the deepest stage, keep
+        channels at high resolution---together with its compute cost,
+        which we report rather than hide.
+\end{itemize}
+
+% =====================================================================
+\section{Related Work}
+
+% 4페이지라 길게 쓸 공간이 없습니다. 각 항목 1~2문장.
+
+% (a) 경량 WMH 모델: VB-Net은 1.08M까지 줄였으나
+%     압축 전후 비교와 병변 크기 분석이 없다.
+\todo{lightweight WMH models} \cite{zhu2022vbnet}
+
+% (b) 압축: StrokeSeg2는 증류로 병변 F1을 유지했다고 보고하지만
+%     병변이 WMH보다 크다. Lan et al.은 채널 폭 1/4 축소 + 출력 증류로
+%     손실의 60.8%를 회복했으나 대상이 뇌 해부 구조여서
+%     작은 병변 문제가 발생하지 않는다. 해부 구조는 항상 같은 자리에
+%     일정한 크기로 있어 거친 해상도에서도 보이지만,
+%     작은 병변은 위치가 임의이고 거친 해상도에서 사라진다.
+\todo{compression for deployment}
+\cite{mahe2026strokeseg,lan2026kd}
+
+% (c) 깊이 축소: 얕은 U-Net이 더 좋은 경우가 보고되어 있고,
+%     작은 WMH가 얕은 층에 의존한다는 보고도 있다.
+%     본 연구는 이를 처음 발견하는 것이 아니라
+%     동일 파라미터 조건의 계열 비교로 정량화한다.
+\todo{depth reduction is known; our contribution is quantification}
+\cite{zhou2020unetpp,fedasap2026}
+
+% (d) 작은 병변 누락: Philps et al.은 불확실성 추정으로 놓친
+%     작은 심부 WMH를 사후 탐지한다. 본 연구는 사후 탐지가 아니라
+%     구조 선택으로 접근한다.
+\todo{post-hoc detection of missed lesions vs our structural approach}
+\cite{philps2025}
+
+% =====================================================================
+\section{Method}
+
+\subsection{Data and Lesion Definition}
+
+We use the MICCAI WMH Segmentation Challenge dataset \cite{kuijf2019wmh}:
+170 subjects from three institutions and five scanners, with the
+organizers' split of 60 training and 110 test subjects. Two scanners
+appear only in the test set. We use FLAIR alone as input.
+
+A lesion is one 26-connected component of the ground-truth mask after
+removing label 2 (other pathology). The test set contains 6{,}939
+lesions. Volume thresholds were fixed \emph{before} any test result was
+examined, by splitting the 3{,}680 training lesions into volume tertiles:
+small $<11.0\,\mathrm{mm^3}$, medium $11.0$--$28.1\,\mathrm{mm^3}$, large
+$\geq 28.1\,\mathrm{mm^3}$. Small lesions make up 2{,}577 of the test
+lesions (37\%). The threshold is defined by volume rather than voxel
+count because voxel size varies across scanners: the same
+$11\,\mathrm{mm^3}$ spans 2.3 voxels on one scanner and 6.3 on another.
+
+\subsection{Baseline and Matched Parameter Budget}
+
+The baseline is a 2.5D U-Net (MONAI \texttt{BasicUNet}) with five stages
+and channels 32--32--64--128--256, giving 1.98\,M parameters and 4.98\,G
+MACs per $256\!\times\!256$ slice. The input stacks the slice above, the
+current slice and the slice below as three channels.
+% 2.5D를 쓴 이유: 슬라이스가 3mm로 두꺼워 3D 합성곱의 이득이 작고,
+% 파라미터·메모리 증가가 경량화 목적과 맞지 않는다.
+\todo{one sentence on why 2.5D}
+
+% 학습 설정: 60 epoch, AdamW (lr 1e-3, wd 1e-4), cosine, BCE+Dice,
+% 라벨 2 제외, 병변 슬라이스 3배 샘플링, 검증 9명 DSC 최대 epoch 선택.
+\todo{training setup in one or two sentences}
+
+Every compressed model is held to the same parameter count, about
+0.12\,M, one sixteenth of the baseline. If models differ in size the
+larger one wins by default and the question ``which method is better''
+cannot be asked. At a fixed budget, any difference reflects \emph{where}
+the parameters were spent. Parameter count alone is not a fair cost
+measure: convolution parameters scale with the square of the channel
+count and are independent of spatial size, while MACs scale with channels
+squared \emph{times} spatial size. We therefore report MACs and measured
+CPU time alongside.
+
+\subsection{Compression Families}
+
+\begin{itemize}
+  \item \textbf{Structural, width.} All channels scaled to $1/4$ (W0.25;
+        8 channels at the first stage).
+  \item \textbf{Structural, depth.} The deepest stage is removed and the
+        remaining stages widened to 16 channels at the first stage.
+  \item \textbf{Pruning.} L1-norm filter pruning \cite{li2017pruning},
+        staged $32\!\to\!24\!\to\!16\!\to\!8$ with retraining at each step.
+  \item \textbf{Quantization.} Post-training INT8 (ONNX QDQ), 256
+        calibration slices, per-channel MinMax, no retraining.
+  \item \textbf{Distillation.} Teacher W1.0 to student, logit
+        distillation at $\tau=2$ with a per-lesion weight
+        $\sqrt{V_{\mathrm{med}}/V}$ clipped to $[1,4]$.
+  \item \textbf{Attention gates.} Attention U-Net gates
+        \cite{oktay2018attention} on every skip connection
+        ($+3.5\%$ parameters).
+\end{itemize}
+
+Pruning, quantization and distillation operate on an existing model,
+whereas structural changes and attention alter the design itself. We do
+not combine two changes at once, since the contribution of each could not
+then be separated.
+
+\subsection{Evaluation}
+
+Predictions are mapped back to the original resolution and scored with
+the official challenge definitions. The operating threshold is fixed at
+0.5 for every model. We report DSC, absolute volume difference (AVD),
+lesion F1, and recall stratified by lesion size. Recall cannot be read
+alone---a model that paints the entire image attains recall 1.0---so
+every claimed recall gain is checked against AVD and lesion precision.
+Core models use three seeds; models marked $\dagger$ use one and are
+excluded from every conclusion.
+
+% =====================================================================
+\section{Results}
+
+\subsection{Compression Removes Small Lesions Invisibly to DSC}
+
+\begin{table}[t]
+\caption{Compression degrades small lesions far more than DSC suggests
+(seed 0, original resolution, 110 test subjects).}
+\label{tab:hidden}
+\centering
+\footnotesize
+\begin{tabular}{lcccc}
+\toprule
+Model & Size & DSC & \multicolumn{2}{c}{Lesion recall} \\
+\cmidrule(lr){4-5}
+      &      &     & Small & Large \\
+\midrule
+W1.0 FP32 (1.98\,M)  & 7.94\,MB & 0.766 & 0.563 & 0.955 \\
+W1.0 INT8            & 2.13\,MB & 0.757 & 0.462 & 0.935 \\
+W0.5 FP32 (0.50\,M)  & 2.01\,MB & 0.758 & 0.467 & 0.926 \\
+W0.25 FP32 (0.12\,M) & 0.53\,MB & 0.756 & 0.362 & 0.904 \\
+W0.25 INT8           & 0.25\,MB & 0.735 & 0.268 & 0.873 \\
+\midrule
+$\Delta$ W1.0$\to$W0.25 & & $-0.010$ & $\mathbf{-0.201}$ & $-0.051$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% 설명 2~3문장: DSC 0.010 vs 작은 병변 0.201, 스무 배 차이.
+% 큰 병변은 0.051. 구조와 파라미터가 같은 INT8 변환만으로도 0.101이
+% 떨어지므로 "작아서 당연하다"로 설명되지 않는다.
+% 왜 DSC가 못 보는가: 작은 병변은 개수로 37%지만 픽셀로는 2% 미만이다.
+Table~\ref{tab:hidden} \todo{read the table; 20-fold gap; INT8 alone
+costs 0.101 so size alone does not explain it}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{fig_map_78.pdf}
+\caption{Every small lesion of one test subject (\#78). Green: detected;
+red: missed. All three panels show the same 16 lesions. Detection falls
+from 11 to 4 and recovers to 11, while DSC \emph{rises} across the panels
+(0.745, 0.773, 0.789).}
+\label{fig:map}
+\end{figure}
+
+% 설명 2문장: 압축 모델은 애매한 픽셀을 칠하지 않는 보수적 방향으로
+% 움직이는데, 큰 병변의 흐릿한 경계에서 과잉 칠이 줄어 DSC가 오히려 오른다.
+% 작은 병변은 전체가 애매한 픽셀이라 통째로 사라진다.
+Fig.~\ref{fig:map} \todo{conservative models gain DSC at large-lesion
+boundaries while losing small lesions entirely}
+
+\subsection{Matched-Budget Comparison}
+
+\begin{table*}[t]
+\caption{Four compression families at a matched parameter budget
+(0.12\,M). Original-resolution official evaluation, 110 test subjects.
+$\dagger$: single seed, reference only.}
+\label{tab:main}
+\centering
+\footnotesize
+\begin{tabular}{llcccccc}
+\toprule
+Family & Method & Seeds & MACs & Size & DSC & AVD & Small-lesion recall \\
+\midrule
+Baseline & W1.0 (1.98\,M) & 1 & 4.98\,G & 7.94\,MB & 0.766 & 24.6\% & 0.563 \\
+\midrule
+Structural & Width scaling W0.25 & 3 & 0.32\,G & 0.53\,MB & 0.750 & 25.2\% & $0.366 \pm 0.011$ \\
+Structural & Decoder simplification$^\dagger$ & 1 & 0.26\,G & 0.47\,MB & 0.747 & 22.9\% & 0.367 \\
+Structural & Two deepest stages removed$^\dagger$ & 1 & 2.93\,G & 0.52\,MB & 0.766 & 21.0\% & 0.451 \\
+\textbf{Structural} & \textbf{Deepest stage removed} & 3 & 1.08\,G & 0.54\,MB & \textbf{0.765} & \textbf{22.8\%} & $\mathbf{0.479 \pm 0.009}$ \\
+Pruning & L1 filter pruning & 3 & 0.32\,G & 0.53\,MB & 0.743 & 22.4\% & $0.397 \pm 0.005$ \\
+Distillation & Size-aware KD & 3 & 0.32\,G & 0.53\,MB & 0.743 & 33.3\% & $0.420 \pm 0.007$ \\
+Distillation & Pruning + KD$^\dagger$ & 1 & 0.32\,G & 0.53\,MB & 0.754 & 22.6\% & 0.400 \\
+Distillation & Depth reduction + KD & 3 & 1.08\,G & 0.54\,MB & 0.761 & 27.6\% & $0.466 \pm 0.040$ \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+% 설명 3~4문장: 우선순위는 깊이 > 증류 > 프루닝 > 채널 폭.
+% 채널 폭 축소 대비 +11.3%p, 원본 대비 잃었던 작은 병변의 약 57%를 되찾았다.
+% DSC는 원본 수준(0.765 vs 0.766)이고 AVD는 원본보다 작으므로
+% 더 칠해서 더 찾은 것이 아니다.
+Table~\ref{tab:main} \todo{ranking; +11.3 points over width scaling;
+57\% of the loss recovered; DSC at baseline level and AVD below baseline,
+so the gain is not over-painting}
+
+% 채널 폭 축소를 비교군으로 삼은 이유 1문장:
+% 증류의 학생 구조도 프루닝의 결과물도 결국 폭이 줄어든 U-Net이므로,
+% 폭 축소는 다른 세 계열이 공통으로 깔고 있는 바탕 구조다.
+\todo{why width scaling is the right control}
+
+\subsection{Why the Deepest Stage Can Go}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{fig1_architecture_bc.pdf}
+\caption{Two networks at the same parameter count (0.12\,M). Left:
+uniform width scaling (W0.25). Right: the deepest stage removed and the
+remaining stages widened. The first stage, where small lesions are still
+visible, carries 8 versus 16 channels.}
+\label{fig:arch}
+\end{figure}
+
+% 기전 3문장: U-Net은 단계마다 영상을 절반으로 줄인다
+% (256 -> 128 -> 64 -> 32 -> 16). 3복셀 병변은 16x16에서 0.2복셀이 되어
+% 이미 없다. 즉 가장 깊은 단계는 작은 병변에 대한 정보를 갖고 있지 않은데,
+% 파라미터는 그곳이 전체의 약 1/3이다.
+\todo{pooling mechanism: a 3-voxel lesion is 0.2 voxels at
+$16\!\times\!16$, yet the deepest stage holds a third of the parameters}
+
+% 블록 민감도 1문장: 원본에서 블록 하나씩 필터 절반을 잘라 DSC 변화를
+% 재면, 가장 깊은 층은 656k를 잘라도 -0.002인 반면
+% 가장 얕은 층은 20k만 잘라도 -0.11이다.
+\todo{block sensitivity: 656k parameters cut costs 0.002 DSC at the
+deepest block, 20k costs 0.11 at the shallowest}
+
+Compared against a model four times larger, depth reduction (0.13\,M,
+1.08\,G) reaches $0.479 \pm 0.009$ while W0.5 (0.49\,M, 1.26\,G) reaches
+$0.470 \pm 0.003$---equal within seed variation, at one quarter the size
+and lower compute.
+% 1문장: 깊이 축소 모델은 W0.5에서 가장 깊은 단계만 떼어낸 것이므로,
+% 이는 그 단계가 파라미터만 차지하고 일을 하지 않았다는 직접 증거다.
+\todo{direct evidence that the deepest stage was idle}
+
+\subsection{Training Tricks Do Not Substitute for Structure}
+
+% 증류 2문장: 폭 축소 위에서는 0.366 -> 0.420으로 회복하지만
+% AVD가 25.2%에서 33.3%로 커진다. 깊이 축소 위에 얹으면
+% 0.479 -> 0.466으로 늘지 않고 AVD(27.6%)와 seed 편차(0.040)만 커진다.
+% 증류는 구조적 결함을 메우는 기법이므로 구조를 고치면 메울 것이 남지 않는다.
+\todo{distillation helps the badly structured model and does nothing on
+top of the well structured one}
+
+% 어텐션 2문장: 사전에 "차이 0.02 미만이면 무승부"로 정해 두었고
+% 실제 차이는 0.014였다. 세 seed 모두 재현율이 올랐으나 정밀도가
+% 0.642에서 0.631로 떨어져 F1은 그대로다. 파라미터를 3.5% 더 쓰고
+% 얻은 것이 없다.
+\todo{attention gates: pre-registered tie threshold, observed gap 0.014,
+precision falls so F1 is unchanged}
+
+\subsection{Compute Cost}
+
+% 3문장: 깊이 축소는 파라미터는 같지만 MACs가 폭 축소의 3.4배이고,
+% 실측 CPU 시간은 환자당 1.4초에서 4초로 2.8배다. 다만
+% (a) 같은 성능의 W0.5보다는 빠르고,
+% (b) 계산량까지 맞춘 모델(0.03M, 0.28G)도 0.418로 폭 축소(0.366)를 이긴다.
+% 즉 가장 깊은 단계를 빼는 것 자체는 계산량 대가 없이 이득이고,
+% 0.418에서 0.479로 더 올리는 부분이 계산량을 지불하고 사는 것이다.
+\todo{3.4x MACs and 2.8x wall-clock; but a compute-matched variant
+(0.03\,M, 0.28\,G) still reaches 0.418 versus 0.366, so removing the
+deepest stage is free and only the further gain is paid for}
+
+% =====================================================================
+\section{Discussion}
+
+% 1문단 — 함의. 압축할 때 작은 병변을 지키려면 파라미터를 어디에 써야
+% 하는가에 대한 답은 "작은 병변이 아직 보이는 고해상도 단계의 채널에
+% 써라"이다. 학습 기법이나 추가 기구는 그다음이다.
+\todo{where to spend the budget}
+
+% 2문단 — 보고 관행. 경량화 연구가 DSC만 보고하면 이 손실이 드러나지
+% 않는다. 병변 크기별 재현율을 함께 보고할 것을 제안한다.
+\todo{reporting practice: size-stratified recall should accompany DSC}
+
+% 3문단 — 한계. 데이터셋 1개, U-Net 계열 1개, FLAIR 단일 입력.
+% 임상 결과와의 연관성은 검증하지 않았다. 계열당 대표 기법 하나씩만
+% 다루었으며 QAT와 특징 증류는 향후 과제다. 실기기 속도는 CPU 한
+% 기종에서만 측정했다.
+\todo{limitations}
+
+% =====================================================================
+\section{Conclusion}
+
+% 4~5문장: 무엇을 줄이느냐가 결정적이다. 같은 0.12M에서 깊은 단계를 빼고
+% 얕은 층을 지킨 구조가 0.479로 폭 축소(0.366), 프루닝(0.397),
+% 증류(0.420)를 모두 앞섰고 4배 큰 모델과 동급이며 DSC는 원본 수준을
+% 유지했다. 대가는 계산량이며 환자당 약 4초다.
+% 경량화 연구는 DSC만 보고해서는 안 된다.
+\todo{conclusion}
+
+% =====================================================================
+\bibliographystyle{IEEEtran}
+\bibliography{refs}
 
 \end{document}

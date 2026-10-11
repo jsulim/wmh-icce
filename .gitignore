@@ -1,0 +1,24 @@
+# LaTeX 컴파일 부산물
+*.aux
+*.log
+*.out
+*.bbl
+*.blg
+*.toc
+*.lof
+*.lot
+*.synctex.gz
+*.fdb_latexmk
+*.fls
+*.nav
+*.snm
+*.vrb
+*.run.xml
+*-blx.bib
+
+# 컴파일 결과 PDF는 올리지 않는다 (Overleaf와 충돌 방지)
+*.pdf
+# 단 그림은 올린다
+!figures/*.pdf
+
+.DS_Store
