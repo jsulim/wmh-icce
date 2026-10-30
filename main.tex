@@ -68,7 +68,7 @@ yuhan@snu.ac.kr}
 Taipei, Taiwan \\
 kenyingkail@nvidia.com}
 \and
-\IEEEauthorblockN{Hyuk-Jae Lee}
+\IEEEauthorblockN{Hyuk-Jae Lee\textsuperscript{\dag}}
 \IEEEauthorblockA{\textit{Seoul National University} \\
 Seoul, Korea \\
 hyukjae@snu.ac.kr}
@@ -80,6 +80,7 @@ knj01@snu.ac.kr}
 }
 
 \maketitle
+{\let\thefootnote\relax\footnotetext{\textsuperscript{\dag}Corresponding authors.}}
 
 % =====================================================================
 \begin{abstract}
@@ -257,7 +258,7 @@ the official challenge definitions. The operating threshold is fixed at
 lesion F1, and recall stratified by lesion size. Recall cannot be read
 alone---a model that paints the entire image attains recall 1.0---so
 every claimed recall gain is checked against AVD and lesion precision.
-Core models use three seeds; models marked $\dagger$ use one and are
+Core models use three seeds; models marked $^{*}$ use one and are
 excluded from every conclusion.
 
 % =====================================================================
@@ -323,7 +324,7 @@ almost entirely of such uncertain pixels and disappear as a whole.
 \begin{table*}[t]
 \caption{Four compression families at a matched parameter budget
 (0.12\,M). Original-resolution official evaluation, 110 test subjects.
-$\dagger$: single seed, reference only.}
+$^{*}$Single seed, reference only.}
 \label{tab:main}
 \centering
 \footnotesize
@@ -334,12 +335,12 @@ Family & Method & Seeds & MACs & Size & DSC & AVD & Small-lesion recall \\
 Baseline & W1.0 (1.98\,M) & 1 & 4.98\,G & 7.94\,MB & 0.766 & 24.6\% & 0.563 \\
 \midrule
 Structural & Width scaling W0.25 & 3 & 0.32\,G & 0.53\,MB & 0.750 & 25.2\% & $0.366 \pm 0.011$ \\
-Structural & Decoder simplification$^\dagger$ & 1 & 0.26\,G & 0.47\,MB & 0.747 & 22.9\% & 0.367 \\
-Structural & Two deepest stages removed$^\dagger$ & 1 & 2.93\,G & 0.52\,MB & 0.766 & 21.0\% & 0.451 \\
+Structural & Decoder simplification$^{*}$ & 1 & 0.26\,G & 0.47\,MB & 0.747 & 22.9\% & 0.367 \\
+Structural & Two deepest stages removed$^{*}$ & 1 & 2.93\,G & 0.52\,MB & 0.766 & 21.0\% & 0.451 \\
 \textbf{Structural} & \textbf{Deepest stage removed} & 3 & 1.08\,G & 0.54\,MB & \textbf{0.765} & \textbf{22.8\%} & $\mathbf{0.479 \pm 0.009}$ \\
 Pruning & L1 filter pruning & 3 & 0.32\,G & 0.53\,MB & 0.743 & 22.4\% & $0.397 \pm 0.005$ \\
 Distillation & Size-aware KD & 3 & 0.32\,G & 0.53\,MB & 0.743 & 33.3\% & $0.420 \pm 0.007$ \\
-Distillation & Pruning + KD$^\dagger$ & 1 & 0.32\,G & 0.53\,MB & 0.754 & 22.6\% & 0.400 \\
+Distillation & Pruning + KD$^{*}$ & 1 & 0.32\,G & 0.53\,MB & 0.754 & 22.6\% & 0.400 \\
 Distillation & Depth reduction + KD & 3 & 1.08\,G & 0.54\,MB & 0.761 & 27.6\% & $0.466 \pm 0.040$ \\
 \bottomrule
 \end{tabular}
