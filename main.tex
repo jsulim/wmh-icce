@@ -317,10 +317,12 @@ small lesions are 37\% of lesions by count but under 2\% by volume.
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{fig_map_78.pdf}
-\caption{Every small lesion of one test subject (\#78). Green: detected;
-red: missed. All three panels show the same 16 lesions. Detection falls
-from 11 to 4 and recovers to 11, while DSC \emph{rises} across the panels
-(0.745, 0.773, 0.789).}
+\caption{Every small lesion of one test subject (\#78), chosen for
+illustration; its 16 small lesions are close to the test-set median of
+17. Green: detected; red: missed. All three panels show the same 16
+lesions. Detection falls from 11 to 4 and recovers to 11, while DSC
+\emph{rises} across the panels (0.745, 0.773, 0.789); over the whole test
+set, DSC instead falls slightly with compression (Table~\ref{tab:hidden}).}
 \label{fig:map}
 \end{figure}
 
@@ -519,9 +521,13 @@ additional small lesions change clinical decisions. We also evaluate one
 representative method per compression family; quantization-aware training
 and feature distillation remain future work. Measured runtime is reported
 on one CPU platform, so deployment speed should be remeasured for other
-hardware. All models use a fixed probability threshold of 0.5; thresholds
-tuned per model on validation data could change small-lesion recall,
-especially for INT8 models whose output calibration shifts. Finally,
+hardware. All models use a fixed probability threshold of 0.5. In a check
+on W0.25 and size-aware distillation, thresholds calibrated per model on
+the validation split (0.45--0.90) traded small-lesion recall for lesion
+precision while leaving lesion F1 essentially unchanged (0.604 vs. 0.609
+for W0.25), and distillation's recall advantage persisted at matched
+lesion precision ($+0.043$, Wilcoxon $p<10^{-7}$ over 110 subjects); the
+depth-reduced model was not re-thresholded. Finally,
 checkpoints were selected by validation DSC, the very metric we argue
 under-weights small lesions; selecting by small-lesion recall could favor
 different epochs.
