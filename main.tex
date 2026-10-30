@@ -27,6 +27,8 @@
 % 초안용 메모. 제출 전에 아래 줄을 \newcommand{\todo}[1]{} 로 교체.
 \newcommand{\todo}[1]{\textcolor{red}{[TODO: #1]}}
 
+% Equal-width author blocks so the three columns line up across rows.
+\newcommand{\authorcol}[1]{\makebox[0.3\textwidth]{#1}}
 % Start a new row of author blocks (IEEE template lists authors left to right, three per row).
 \makeatletter
 \newcommand{\linebreakand}{%
@@ -44,37 +46,37 @@ Hyperintensity Segmentation}
 
 % 저자 정보를 채우세요.
 \author{\IEEEauthorblockN{Junsu Lim}
-\IEEEauthorblockA{\textit{OUTTA} \\
+\IEEEauthorblockA{\authorcol{\textit{OUTTA}}\\
 Seoul, Korea \\
 junsu.lim@outta.ai}
 \and
 \IEEEauthorblockN{Kyeonghun Kim}
-\IEEEauthorblockA{\textit{OUTTA} \\
+\IEEEauthorblockA{\authorcol{\textit{OUTTA}}\\
 Seoul, Korea \\
 kyeonghun.kim@outta.ai}
 \and
 \IEEEauthorblockN{Jiwon Park}
-\IEEEauthorblockA{\textit{Sangmyung University} \\
+\IEEEauthorblockA{\authorcol{\textit{Sangmyung University}}\\
 Seoul, Korea \\
 202421322@sangmyung.kr}
 \linebreakand
 \IEEEauthorblockN{Youngung Han}
-\IEEEauthorblockA{\textit{Seoul National University} \\
+\IEEEauthorblockA{\authorcol{\textit{Seoul National University}}\\
 Seoul, Korea \\
 yuhan@snu.ac.kr}
 \and
 \IEEEauthorblockN{Ken Ying-Kai Liao}
-\IEEEauthorblockA{\textit{NVIDIA AI Technology Center} \\
+\IEEEauthorblockA{\authorcol{\textit{NVIDIA AI Technology Center}}\\
 Taipei, Taiwan \\
 kenyingkail@nvidia.com}
 \and
-\IEEEauthorblockN{Hyuk-Jae Lee\textsuperscript{\dag}}
-\IEEEauthorblockA{\textit{Seoul National University} \\
+\IEEEauthorblockN{Hyuk-Jae Lee\smash{\textsuperscript{\dag}}}
+\IEEEauthorblockA{\authorcol{\textit{Seoul National University}}\\
 Seoul, Korea \\
 hyukjae@snu.ac.kr}
 \linebreakand
-\IEEEauthorblockN{Nam-Joon Kim\textsuperscript{\dag}}
-\IEEEauthorblockA{\textit{Seoul National University} \\
+\IEEEauthorblockN{Nam-Joon Kim\smash{\textsuperscript{\dag}}}
+\IEEEauthorblockA{\authorcol{\textit{Seoul National University}}\\
 Seoul, Korea \\
 knj01@snu.ac.kr}
 }
