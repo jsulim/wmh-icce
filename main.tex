@@ -27,6 +27,15 @@
 % 초안용 메모. 제출 전에 아래 줄을 \newcommand{\todo}[1]{} 로 교체.
 \newcommand{\todo}[1]{\textcolor{red}{[TODO: #1]}}
 
+% Start a new row of author blocks (IEEE template lists authors left to right, three per row).
+\makeatletter
+\newcommand{\linebreakand}{%
+  \end{@IEEEauthorhalign}
+  \hfill\mbox{}\par
+  \mbox{}\hfill\begin{@IEEEauthorhalign}
+}
+\makeatother
+
 \begin{document}
 
 \title{What Compression Removes: Small Lesions Vanish\\
@@ -48,7 +57,22 @@ kyeonghun.kim@outta.ai}
 \IEEEauthorblockA{\textit{Sangmyung University} \\
 Seoul, Korea \\
 202421322@sangmyung.kr}
+\linebreakand
+\IEEEauthorblockN{Youngung Han}
+\IEEEauthorblockA{\textit{Seoul National University} \\
+Seoul, Korea \\
+yuhan@snu.ac.kr}
 \and
+\IEEEauthorblockN{Ken Ying-Kai Liao}
+\IEEEauthorblockA{\textit{NVIDIA AI Technology Center} \\
+Taipei, Taiwan \\
+kenyingkail@nvidia.com}
+\and
+\IEEEauthorblockN{Hyuk-Jae Lee}
+\IEEEauthorblockA{\textit{Seoul National University} \\
+Seoul, Korea \\
+hyukjae@snu.ac.kr}
+\linebreakand
 \IEEEauthorblockN{Nam-Joon Kim\textsuperscript{\dag}}
 \IEEEauthorblockA{\textit{Seoul National University} \\
 Seoul, Korea \\
