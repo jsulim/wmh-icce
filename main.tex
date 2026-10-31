@@ -93,10 +93,10 @@ small-lesion recall falls by 0.197, showing that DSC hides a much larger
 loss. We compare four compression families and an attention variant at a
 matched parameter budget using lesion-size-stratified recall. Removing
 the deepest U-Net stage gives the highest small-lesion recall (0.479) of the
-compression families, equal within seed variation to a four-times-larger
+compression families, not significantly different from a four-times-larger
 model, with DSC close to the uncompressed baseline. This gain costs 3.4
-times the MACs of uniform width scaling; at matched compute, the recall
-gain is offset by lower lesion precision. Compression studies for WMH segmentation
+times the MACs of uniform width scaling; at matched compute (and one quarter
+of the parameters), the recall gain is offset by lower lesion precision. Compression studies for WMH segmentation
 should therefore report lesion-size-stratified recall alongside DSC.
 % 아래 다섯 문장을 영어로 풀면 됩니다.
 %  (1) WMH 분할 모델을 GPU 없는 환경에 배포하려면 압축이 필요하다.
@@ -141,7 +141,7 @@ can be difficult; this motivates compact models for local deployment
 %        작은 병변 재현율은 0.201 떨어졌다. 스무 배 차이다.
 The usual summary metric for compression is DSC, but DSC is dominated by
 overlapping pixels and therefore by large lesions. In our test set, small
-lesions are 37\% of lesions by count but under 2\% by volume. When the
+lesions are 36\% of lesions by count but under 1\% by volume. When the
 baseline is reduced from 1.98\,M to 0.12\,M parameters, DSC drops by only
 0.016, while small-lesion recall drops by 0.197, a change about 12 times
 larger (three-seed mean of the compressed model).
@@ -196,8 +196,8 @@ removing label 2 (other pathology). The test set contains 6{,}939
 lesions. Volume thresholds were fixed \emph{before} any test result was
 examined, by splitting the 3{,}680 training lesions into volume tertiles:
 small $<11.0\,\mathrm{mm^3}$, medium $11.0$--$28.1\,\mathrm{mm^3}$, large
-$\geq 28.1\,\mathrm{mm^3}$. Small lesions make up 2{,}577 of the test
-lesions (37\%). The threshold is defined by volume rather than voxel
+$\geq 28.1\,\mathrm{mm^3}$. Small lesions make up 2{,}499 of the test
+lesions (36\%). The threshold is defined by volume rather than voxel
 count because voxel size varies across scanners: the same
 $11\,\mathrm{mm^3}$ spans 2.3 voxels on one scanner and 6.3 on another.
 
@@ -244,8 +244,9 @@ CPU time alongside.
   \item \textbf{Quantization.} Post-training INT8 (ONNX QDQ), 256
         calibration slices, per-channel MinMax, no retraining.
   \item \textbf{Distillation.} Teacher W1.0 to student, logit
-        distillation at $\tau=2$ with a per-lesion weight
-        $\sqrt{V_{\mathrm{med}}/V}$ clipped to $[1,4]$ \cite{hinton2015distilling}.
+        distillation at $\tau=2$ \cite{hinton2015distilling}; both the BCE
+        and distillation terms use a per-lesion weight
+        $\sqrt{V_{\mathrm{med}}/V}$ clipped to $[1,4]$.
   \item \textbf{Attention gates.} Attention U-Net gates
         \cite{oktay2018attention} on every skip connection
         ($+3.5\%$ parameters).
@@ -314,7 +315,7 @@ are 0.016 and 0.197. The loss is not explained by reduced capacity alone:
 INT8 conversion of the three-seed W0.25 models, which leaves architecture
 and parameter count unchanged, lowers small-lesion recall from
 $0.366 \pm 0.011$ to $0.292 \pm 0.042$. DSC is insensitive to this loss because
-small lesions are 37\% of lesions by count but under 2\% by volume.
+small lesions are 36\% of lesions by count but under 1\% by volume.
 
 \begin{figure}[t]
 \centering
@@ -339,8 +340,8 @@ almost entirely of such uncertain pixels and disappear as a whole.
 \subsection{Matched-Budget Comparison}
 
 \begin{table*}[t]
-\caption{Four compression families at a matched parameter budget
-($\approx$0.11--0.13\,M). Original-resolution official evaluation, 110 test
+\caption{Compression families and an attention variant at a matched
+parameter budget ($\approx$0.11--0.14\,M; INT8 in Table~\ref{tab:hidden}). Original-resolution official evaluation, 110 test
 subjects. Rows below the second rule are references outside the matched
 budget. Lesion P: lesion-level precision. Bold: recommended configuration. $^{*}$Single seed, reference only.}
 \label{tab:main}
@@ -386,8 +387,8 @@ visible, carries 8 versus 16 channels.}
 Among the three-seed compression families in Table~\ref{tab:main},
 removing the deepest stage gives the highest small-lesion recall, followed
 by size-aware distillation, L1 filter pruning, and uniform width scaling;
-adding attention gates raises recall further but at a cost in lesion
-precision (Sec.~\ref{sec:tricks}). It
+adding attention gates gives an inconclusive recall change at a cost in
+lesion precision (Sec.~\ref{sec:tricks}). It
 is 11.3 percentage points above width scaling (0.479 vs. 0.366), a
 comparison between three-seed models. Relative to the single-seed
 baseline (reference only), this corresponds to recovering about 57\% of
@@ -422,8 +423,8 @@ U-Nets with reduced channel capacity.
 Fig.~\ref{fig:arch} shows how the two matched-budget structures differ.
 The mechanism is consistent with the U-Net resolution schedule. Each
 downsampling stage halves the image size (256, 128, 64, 32, and
-16 pixels), so a 3-voxel lesion occupies only about 0.2 voxel at the
-$16\!\times\!16$ stage. The deepest stage therefore has little spatial
+16 pixels), so a lesion three pixels across spans only about 0.2 pixel
+at the $16\!\times\!16$ stage. The deepest stage therefore has little spatial
 evidence for small lesions, yet its encoder and decoder blocks hold about three quarters (74\%) of
 the parameters.
 
@@ -431,21 +432,21 @@ the parameters.
 % 재면, 가장 깊은 층은 656k를 잘라도 -0.002인 반면
 % 가장 얕은 층은 20k만 잘라도 -0.11이다.
 A block-sensitivity check on the baseline supports the same interpretation:
-halving filters in the deepest block removes 656k parameters but changes
-DSC by only 0.002, whereas halving filters in the shallowest block removes
+halving filters in the deepest encoder block removes 656k parameters but
+changes DSC by only 0.002 (deepest decoder block: $-0.038$), whereas
+halving filters in the shallowest block removes
 about 17k parameters and reduces DSC by 0.11.
 
 Compared against a model four times larger, depth reduction (0.13\,M,
 1.08\,G) reaches $0.479 \pm 0.009$ while W0.5 (0.50\,M, 1.26\,G; Table~\ref{tab:main}) reaches
-$0.470 \pm 0.003$---equal within seed variation, at one quarter the size
+$0.470 \pm 0.003$---not significantly different, at one quarter the size
 and lower compute. The subject-level difference is $+0.008$ (CI $-0.006$
 to 0.023), with no difference in lesion precision or F1.
 % 1문장: 깊이 축소 모델은 W0.5에서 가장 깊은 단계만 떼어낸 것이므로,
 % 이는 그 단계가 파라미터만 차지하고 일을 하지 않았다는 직접 증거다.
-Because this model is obtained from W0.5 by removing only the deepest
-stage, this comparison is direct evidence that the removed stage was
-mostly occupying parameters rather than contributing useful small-lesion
-evidence.
+Because this model has the architecture of W0.5 without its deepest
+stage (trained from scratch), the comparison suggests that this stage
+contributes little small-lesion evidence at this scale.
 
 \subsection{Training Tricks Do Not Substitute for Structure}\label{sec:tricks}
 
@@ -491,14 +492,14 @@ more MACs (1.08\,G vs. 0.32\,G), and the median per-subject CPU time on a
 single thread of an Intel Xeon (2.2\,GHz, Google Colab, ONNX Runtime)
 increases from 2.2 to 4.0 seconds. Two checks place this cost in context. First, the model is still
 cheaper than the performance-matched W0.5 model (1.08 vs. 1.26\,GMACs;
-4.0 vs. 5.1\,s). Second, removing the deepest stage does not give a net
-gain without the extra computation: a compute-matched depth-reduced
-variant (0.03\,M, 0.28\,G; three seeds) raises small-lesion recall over
+4.0 vs. 5.1\,s). Second, a compute-matched depth-reduced variant
+(0.28\,G; three seeds), which also has only one quarter of the parameters
+(0.03\,M), raises small-lesion recall over
 W0.25 ($0.418 \pm 0.033$ vs. $0.366 \pm 0.011$; $+0.052$, CI 0.037--0.066)
 but loses lesion precision ($-0.028$, CI $-0.043$ to $-0.013$), leaving
-lesion F1 unchanged. The net improvement in recall, precision and lesion
-F1 of the full depth-reduced model is therefore bought with additional
-computation.
+lesion F1 unchanged. The net improvement of the full depth-reduced model
+thus requires its additional computation (and parameters); matching both
+at once was not tested.
 
 % =====================================================================
 \section{Discussion}
@@ -555,8 +556,8 @@ different epochs.
 What is removed matters as much as how much is removed. At the same
 $\approx$0.12--0.13\,M-parameter budget, removing the deepest stage and preserving
 high-resolution channels reaches 0.479 small-lesion recall, above width
-scaling (0.366), pruning (0.397), and distillation (0.420). It is equal
-within seed variation to a four-times-larger W0.5 model with DSC close to
+scaling (0.366), pruning (0.397), and distillation (0.420). It is not
+significantly different from a four-times-larger W0.5 model, with DSC close to
 the uncompressed baseline, but the price is higher computation: about 4 seconds
 per subject on a single CPU thread. Lightweight WMH segmentation should not be judged by
 DSC alone.
